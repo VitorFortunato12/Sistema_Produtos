@@ -7,20 +7,20 @@
                 <div class="col-12 col-md-6">
                     <input 
                         type="text" 
-                        name="nome" 
+                        name="nomePesquisa" 
                         class="form-control" 
                         placeholder="Pesquisar por nome..." 
-                        value="{{nome}}">
+                        value="{{nomePesquisa}}"> <!-- Preencher com o valor pesquisado -->
                 </div>
 
                 <!-- Filtro por Categoria -->
                 <div class="col-12 col-md-4">
                     <select name="categoria" class="form-control">
                         <option value="">Todas as categorias</option>
-                        <option value="Eletronicos" >Eletronicos</option>
-                        <option value="Vestuario" >Vestuario</option>
-                        <option value="Farmacia" >Farmacia</option>
-                        <option value="Eletrodomesticos" >Eletrodomesticos</option>
+                        <option value="Eletronicos" {{#ifCond categoria "==" "Eletronicos"}}selected{{/ifCond}}>Eletronicos</option>
+                        <option value="Vestuario" {{#ifCond categoria "==" "Vestuario"}}selected{{/ifCond}}>Vestuario</option>
+                        <option value="Farmacia" {{#ifCond categoria "==" "Farmacia"}}selected{{/ifCond}}>Farmacia</option>
+                        <option value="Eletrodomesticos" {{#ifCond categoria "==" "Eletrodomesticos"}}selected{{/ifCond}}>Eletrodomesticos</option>
                     </select>
                 </div>
 
@@ -32,42 +32,44 @@
         </form>
 
         <!-- Lista de Produtos -->
-    <div class="container mt-4">
-        <div class="row">
-            {{#each produtos}}
-            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-                <div class="card">
-                    <img src="../imagens/{{imagem}}" >
-                    <div class="card-body">
-                        <h5 class="card-title">{{nome}}</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">R$ {{preco}}</h6>
-                        <p class="card-text">{{descricao}}</p>
-                        <p class="card-text"><b>Categoria:</b> {{categoria}}</p>
-                        <p class="card-text"><small><b>Quantidade:</b> {{quantidade}}</small></p>
-                    </div>
-                    <div class="card-footer text-center">
-                        <a href="/formularioEditar/{{id_produto}}" class="btn btn-warning btn-sm">Alterar</a>
-                        <a href="/remover/{{id_produto}}&{{imagem}}" class="btn btn-danger btn-sm">Remover</a>
+        <div class="container mt-4">
+            <div class="row">
+                {{#each produtos}}
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                    <div class="card">
+                        <img src="../imagens/{{imagem}}" alt="{{nome}}" class="card-img-top">
+                        <div class="card-body">
+                            <h5 class="card-title">{{nome}}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">R$ {{preco}}</h6>
+                            <p class="card-text">{{descricao}}</p>
+                            <p class="card-text"><b>Categoria:</b> {{categoria}}</p>
+                            <p class="card-text"><small><b>Quantidade:</b> {{quantidade}}</small></p>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="/formularioEditar/{{id_produto}}" class="btn btn-warning btn-sm">Alterar</a>
+                            <a href="/remover/{{id_produto}}&{{imagem}}" class="btn btn-danger btn-sm">Remover</a>
+                        </div>
                     </div>
                 </div>
+                {{/each}}
             </div>
-            {{/each}}
         </div>
     </div>
-    <style>
-         .card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            transition: transform 0.2s ease-in-out;
-        }
-
-        .card:hover {
-            transform: scale(1.05);
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-footer {
-            background: #f9f9f9;
-        }
-    </style>
 </body>
+
+<style>
+    .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        transform: scale(1.05);
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-footer {
+        background: #f9f9f9;
+    }
+</style>

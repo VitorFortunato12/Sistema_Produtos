@@ -45,36 +45,131 @@ app.get('/cadastrarProduto', function (req, res) {
 
 //rota cadastro Produtos
 app.post('/cadastrarProduto', function (req, res) {
-    let { nome, descricao, categoria, preco, quantidade } = req.body;
-    let imagem = req.files?.imagem?.name;
-    let sql = `INSERT INTO produto (nome, descricao, categoria, preco, quantidade, imagem) VALUES ('${nome}', '${descricao}', '${categoria}', '${preco}', '${quantidade}', '${imagem}')`;
+    try {
+        let { nome, descricao, categoria, preco, quantidade } = req.body;
+        
+        // Validação dos campos obrigatórios
+        if (!nome || !descricao || !categoria || !preco || !quantidade) {
+            return res.send(`
+                <script>
+                    alert("Todos os campos são obrigatórios. Por favor, preencha todos os dados.");
+                    window.location.href = '/cadastrarProduto';
+                </script>
+            `);
+        }
 
-    conexao.query(sql, function (erro, retorno) {
-        //caso ocorra algum erro
-        if (erro) throw erro;
+        // Validação do envio da imagem
+        if (!req.files || !req.files.imagem) {
+            return res.send(`
+                <script>
+                    alert("É necessário enviar uma imagem do produto.");
+                    window.location.href = '/cadastrarProduto';
+                </script>
+            `);
+        }
 
-        //caso contrario
-        req.files.imagem.mv(__dirname + '/imagens/' + req.files.imagem.name);
-        console.log(retorno)
-    });
-    res.redirect('/listaProdutos');
+        let imagem = req.files.imagem.name;
+
+        // SQL para inserção
+        let sql = `
+            INSERT INTO produto (nome, descricao, categoria, preco, quantidade, imagem) 
+            VALUES ('${nome}', '${descricao}', '${categoria}', '${preco}', '${quantidade}', '${imagem}')
+        `;
+
+        conexao.query(sql, function (erro, retorno) {
+            // Tratamento de erros do banco de dados
+            if (erro) {
+                console.error(erro);
+                let mensagem = "Erro ao salvar no banco de dados. ";
+                if (erro.code === 'ER_DUP_ENTRY') {
+                    mensagem += "Produto com os mesmos dados já existe.";
+                } else if (erro.code === 'ER_BAD_NULL_ERROR') {
+                    mensagem += "Algum campo obrigatório está faltando.";
+                } else {
+                    mensagem += "Por favor, tente novamente.";
+                }
+
+                return res.send(`
+                    <script>
+                        alert("${mensagem}");
+                        window.location.href = '/cadastrarProduto';
+                    </script>
+                `);
+            }
+
+            // Salvando a imagem no servidor
+            req.files.imagem.mv(__dirname + '/imagens/' + imagem, function (uploadErro) {
+                if (uploadErro) {
+                    console.error(uploadErro);
+                    return res.send(`
+                        <script>
+                            alert("Erro ao salvar a imagem. Tente novamente.");
+                            window.location.href = '/cadastrarProduto';
+                        </script>
+                    `);
+                }
+
+                // Redirecionamento caso tudo ocorra bem
+                res.redirect('/listaProdutos');
+            });
+        });
+
+    } catch (ex) {
+        console.error(ex);
+        res.send(`
+            <script>
+                alert("Ocorreu um erro inesperado. Tente novamente.");
+                window.location.href = '/cadastrarProduto';
+            </script>
+        `);
+    }
 });
 
 app.get('/listaProdutos', function (req, res) {
-    let sql = 'SELECT * FROM produto';
-    conexao.query(sql, function (erro, retorno) {
-        res.render('listaProdutos', { produtos: retorno });
+    const { nomePesquisa, categoria } = req.query;
+
+    // Construir a query com os filtros
+    let sql = 'SELECT * FROM produto WHERE 1=1'; // "1=1" permite adicionar condições dinamicamente
+
+    if (nomePesquisa && nomePesquisa.trim() !== '') {
+        sql += ` AND nome LIKE '%${nomePesquisa}%'`; // Filtrar por nome
+    }
+
+    if (categoria && categoria.trim() !== '') {
+        sql += ` AND categoria = '${categoria}'`; // Filtrar por categoria
+    }
+
+    conexao.query(sql, function (erro, produtos) {
+        if (erro) {
+            console.error('Erro ao buscar produtos:', erro);
+            return res.status(500).send('Erro ao buscar produtos.');
+        }
+
+        // Renderizar a página com os produtos filtrados e parâmetros de pesquisa
+        res.render('listaProdutos', {
+            produtos,
+            nomePesquisa, // Para preencher o campo de pesquisa no formulário
+            categoria,    // Para selecionar a categoria no filtro
+        });
     });
 });
 
-/*
-app.get('/listaProdutos', function (req, res) {
+const Handlebars = require('handlebars');
+
+Handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
+    switch (operator) {
+        case '==': return (v1 == v2) ? options.fn(this) : options.inverse(this);
+        default: return options.inverse(this);
+    }
+});
+
+/*app.get('/listaProdutos', function (req, res) {
     let sql = 'SELECT * FROM produto';
     conexao.query(sql, function (erro, retorno) {
-        res.render('listaProdutos', { produtos: retorno });
+        res.render('listaProdutos', { produtos: retorno, situacao: req.params.situacao });
     });
-});
-*/
+});*/
+
 
 //rota remoçao produto
 app.get('/remover/:id_produto&:imagem', function (req, res) {
@@ -88,6 +183,7 @@ app.get('/remover/:id_produto&:imagem', function (req, res) {
     });
     res.redirect('/listaProdutos');
 });
+
 //rota para rediricionar para editar produto
 app.get('/formularioEditar/:id_produto', function (req, res) {
     let sql = `SELECT * FROM produto WHERE id_produto = ${req.params.id_produto}`;
@@ -100,6 +196,16 @@ app.get('/formularioEditar/:id_produto', function (req, res) {
 //rota para editar produto
 app.post('/editar', function (req, res) {
     let { id_produto, nome, descricao, categoria, preco, quantidade, nomeImagem } = req.body;
+
+    //Validação dos campos obrigatorios
+    if (!id_produto || !nome || !descricao || !categoria || !preco || !quantidade) {
+        return res.send(`
+            <script>
+                alert("Todos os campos são obrigatórios. Por favor, preencha todos os dados.");
+                window.location.href = '/formularioEditar/${id_produto}';
+            </script>
+        `);
+    }
 
     //Definir o tipo de ediçao
     try{
