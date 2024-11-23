@@ -57,8 +57,7 @@ app.post('/cadastrarProduto', function (req, res) {
         req.files.imagem.mv(__dirname + '/imagens/' + req.files.imagem.name);
         console.log(retorno)
     });
-    res.end();
-    //res.redirect('/listaProdutos');
+    res.redirect('/listaProdutos');
 });
 
 app.get('/listaProdutos', function (req, res) {
@@ -67,6 +66,15 @@ app.get('/listaProdutos', function (req, res) {
         res.render('listaProdutos', { produtos: retorno });
     });
 });
+
+/*
+app.get('/listaProdutos', function (req, res) {
+    let sql = 'SELECT * FROM produto';
+    conexao.query(sql, function (erro, retorno) {
+        res.render('listaProdutos', { produtos: retorno });
+    });
+});
+*/
 
 //rota remoçao produto
 app.get('/remover/:id_produto&:imagem', function (req, res) {
@@ -88,5 +96,36 @@ app.get('/formularioEditar/:id_produto', function (req, res) {
         res.render('formularioEditar', {produto:retorno[0]});
     });;
 });
+
+//rota para editar produto
+app.post('/editar', function (req, res) {
+    let { id_produto, nome, descricao, categoria, preco, quantidade, nomeImagem } = req.body;
+
+    //Definir o tipo de ediçao
+    try{
+        let imagem = req.files.imagem;
+        let sql = `UPDATE produto SET nome = '${nome}', descricao = '${descricao}', categoria = '${categoria}', preco = '${preco}', quantidade = '${quantidade}', imagem = '${imagem.name}' WHERE id_produto = ${id_produto}`;
+
+        conexao.query(sql, function (erro, retorno){
+            if(erro) throw erro;
+
+            //remover imagem antiga
+            fs.unlink(__dirname + '/imagens/' + nomeImagem, (erro_imagem) => {
+                console.log('Falha ao remvore');
+            });
+
+            //salvar nova imagem
+            imagem.mv(__dirname + '/imagens/' + imagem.name);
+        });
+    }catch(erro){
+        let sql = `UPDATE produto SET nome = '${nome}', descricao = '${descricao}', categoria = '${categoria}', preco = '${preco}', quantidade = '${quantidade}' WHERE id_produto = ${id_produto}`;
+
+        conexao.query(sql, function (erro, retorno){
+            if(erro) throw erro;
+        });
+    }
+    res.redirect('/listaProdutos');
+});
+
 //servidor
 app.listen(3000);

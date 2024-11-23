@@ -31,6 +31,7 @@
         margin-bottom: 20px;
         margin-left: 200px;
     }
+
     label {
         font-weight: bold;
         color: #555;
@@ -82,31 +83,37 @@
         <form id="formCadastro" action="/editar" method="POST" enctype="multipart/form-data">
 
             <img src="../imagens/{{produto.imagem}}">
+            <input type="hidden" name="nomeImagem" value="{{produto.imagem}}">
 
             <input type="hidden" name="id_produto" value="{{produto.id_produto}}">
             <label for="nome">Nome do Produto</label>
-            <input type="text" id="nome" name="nome" value="{{produto.nome}}" placeholder="Digite o nome do produto" required>
+            <input type="text" id="nome" name="nome" value="{{produto.nome}}" placeholder="Digite o nome do produto"
+                required>
 
             <label for="descricao">Descrição</label>
-            <input type="text" id="descricao" name="descricao" value="{{produto.descricao}}" placeholder="Digite a descrição do produto">
+            <input type="text" id="descricao" name="descricao" value="{{produto.descricao}}"
+                placeholder="Digite a descrição do produto">
 
             <label for="categoria">Categoria</label>
             <select id="categoria" name="categoria" value="{{produto.categoria}}" required>
                 <option value="">Selecione a categoria</option>
-                <option value="Notebooks">Notebooks</option>
-                <option value="Camisas">Camisas</option>
-                <option value="Celulares">Celulares</option>
+                <option value="Eletronicos">Eletronicos</option>
+                <option value="Vestuario">Vestuario</option>
+                <option value="Farmacia">Farmacia</option>
+                <option value="Eletrodomesticos">Eletrodomesticos</option>
             </select>
 
             <label for="preco">Preço (R$)</label>
-            <input type="number" id="preco" name="preco" value="{{produto.preco}}" placeholder="Digite o preço" step="0.01" required>
+            <input type="number" id="preco" name="preco" value="{{produto.preco}}" placeholder="Digite o preço"
+                step="0.01" required>
 
             <label for="quantidade">Quantidade em Estoque</label>
-            <input type="number" id="quantidade" name="quantidade" value="{{produto.quantidade}}" placeholder="Digite a quantidade" required>
+            <input type="number" id="quantidade" name="quantidade" value="{{produto.quantidade}}"
+                placeholder="Digite a quantidade" required>
 
             <label for="imagem">Foto</label>
             <input type="file" id="file" name="imagem" placeholder="Digite a URL da imagem">
-            
+
             <button type="submit" value="Alterar">Cadastrar Produto</button>
             <a href="/listaProdutos">Cancelar</a>
         </form>
