@@ -1,8 +1,10 @@
 const express = require('express');//improta modulo express
+const fileUpload = require('express-fileupload');//importa modulo express-fileupload
 const mysql = require('mysql2');//importa modulo mysql
 const {engine} = require('express-handlebars');//importa modulo express-handlebars
 
 const app = express();//cria uma instancia do express
+app.use(fileUpload());//habilitando upload de arquivos
 
 //adicionar bootstrap
 app.use('/bootstrap', express.static('./node_modules/bootstrap/dist'));
@@ -20,6 +22,10 @@ const conexao = mysql.createConnection({
     database: 'produtos'
 });
 
+//manipulaçao de daddos via rotas
+app.use(express.json());
+app.use(express.urlencoded({extended: false}));
+
 conexao.connect(function(erro){
     if(erro){
         console.log( erro.code + 'Erro ao conectar com o banco de dados');
@@ -28,9 +34,19 @@ conexao.connect(function(erro){
     }
 });
 
-//rota 
-app.get('/', function (req, res){
+//rota home
+app.get('/cadastrarProduto', function(req, res){
     res.render('cadastroProdutos');
+});
+
+//rota cadastro Produtos
+app.post('/cadastrarProduto', function(req, res){
+    console.log(req.body);
+    console.log(req.files.imagem.name);
+
+    //envia a imagem para o diretorio imagens
+    req.files.imagem.mv(__dirname + '/imagens/' + req.files.imagem.name);
+    res.end();
 });
 
 //servidor
