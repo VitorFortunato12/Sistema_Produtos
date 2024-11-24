@@ -174,56 +174,95 @@ Handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
 app.get('/comprar/:id_produto', (req, res) => {
     const id = req.params.id_produto;
 
-    // Atualizar a quantidade no banco de dados
-    const sql = `UPDATE produto SET quantidade = quantidade - 1 WHERE id_produto = ? AND quantidade > 0`;
-
-    conexao.query(sql, [id], (erro, resultado) => {
-        if (erro) {
-            console.error('Erro ao atualizar a quantidade:', erro);
+    // Buscar detalhes do produto
+    conexao.query('SELECT preco, quantidade FROM produto WHERE id_produto = ?', [id], (erro, resultados) => {
+        if (erro || resultados.length === 0) {
+            console.error('Erro ao buscar produto:', erro);
             return res.status(500).send('Erro ao processar a compra.');
         }
 
-        if (resultado.affectedRows === 0) {
-            // Se não houver mais quantidade ou produto não encontrado, tenta deletar
-            const deleteSql = `DELETE FROM produto WHERE id_produto = ?`;
-            conexao.query(deleteSql, [id], (erroDelete, retornoDelete) => {
-                if (erroDelete) {
-                    console.error('Erro ao deletar produto:', erroDelete);
-                    return res.status(500).send('Erro ao processar a exclusão.');
-                }
+        const produto = resultados[0];
 
-                // Caso haja uma imagem, tenta deletar também
-                const imagem = req.params.imagem; // Certifique-se de que 'imagem' é passado corretamente no req.params
-                if (imagem) {
-                    fs.unlink(__dirname + '/imagens/' + imagem, (erroImagem) => {
-                        if (erroImagem) {
-                            console.error('Erro ao remover imagem:', erroImagem);
-                            return res.status(500).send('Erro ao remover a imagem.');
-                        }
-                    });
-                }
-
-                console.log('Produto excluído com sucesso!');
-            });
+        if (produto.quantidade <= 0) {
+            return res.status(400).send('Estoque insuficiente.');
         }
 
-        // Redirecionar para a lista de produtos
-        res.redirect('/listaProdutos');
+        const valorTotal = produto.preco; // Considera uma unidade para o exemplo
+
+        // Atualizar estoque e registrar venda
+        conexao.query(
+            'UPDATE produto SET quantidade = quantidade - 1 WHERE id_produto = ? AND quantidade > 0',
+            [id],
+            (erroAtualizar) => {
+                if (erroAtualizar) {
+                    console.error('Erro ao atualizar estoque:', erroAtualizar);
+                    return res.status(500).send('Erro ao atualizar estoque.');
+                }
+
+                // Inserir venda no banco
+                conexao.query(
+                    'INSERT INTO venda (id_produto, quantidade, valor_total) VALUES (?, ?, ?)',
+                    [id, 1, valorTotal],
+                    (erroVenda) => {
+                        if (erroVenda) {
+                            console.error('Erro ao registrar venda:', erroVenda);
+                            return res.status(500).send('Erro ao registrar venda.');
+                        }
+
+                        // Redirecionar de volta para a lista de produtos
+                        res.redirect('/listaProdutos');
+                    }
+                );
+            }
+        );
     });
 });
 
 //rota remoçao produto
-app.get('/remover/:id_produto&:imagem', function (req, res) {
-    let sql = `DELETE FROM produto WHERE id_produto = ${req.params.id_produto}`;
+app.get('/remover/:id_produto/:imagem', function (req, res) {
+    const { id_produto, imagem } = req.params;
 
-    conexao.query(sql, function (erro, retorno) {
-        if (erro) throw erro;
-        fs.unlink(__dirname + '/imagens/' + req.params.imagem, (erro_imagem) => {
-            console.log(erro_imagem);
+    // Atualizar vendas para desvincular o produto
+    const atualizarVendas = 'UPDATE venda SET id_produto = NULL WHERE id_produto = ?';
+    conexao.query(atualizarVendas, [id_produto], (erroAtualizar) => {
+        if (erroAtualizar) {
+            console.error('Erro ao atualizar vendas associadas:', erroAtualizar);
+            return res.send(`
+                <script>
+                    alert("Erro ao atualizar vendas associadas.");
+                    window.location.href = '/listaProdutos';
+                </script>
+            `);
+        }
+
+        // Excluir o produto
+        const deleteProduto = 'DELETE FROM produto WHERE id_produto = ?';
+        conexao.query(deleteProduto, [id_produto], (erroProduto) => {
+            if (erroProduto) {
+                console.error('Erro ao remover produto:', erroProduto);
+                return res.send(`
+                    <script>
+                        alert("Erro ao remover produto.");
+                        window.location.href = '/listaProdutos';
+                    </script>
+                `);
+            }
+
+            // Remover a imagem do servidor
+            const caminhoImagem = __dirname + '/imagens/' + imagem;
+            fs.unlink(caminhoImagem, (erroImagem) => {
+                if (erroImagem) {
+                    console.error('Erro ao remover imagem:', erroImagem);
+                }
+
+                // Redirecionar após a operação
+                res.redirect('/listaProdutos');
+            });
         });
     });
-    res.redirect('/listaProdutos');
 });
+
+
 
 //rota para rediricionar para editar produto
 app.get('/formularioEditar/:id_produto', function (req, res) {
@@ -273,6 +312,23 @@ app.post('/editar', function (req, res) {
     }
     res.redirect('/listaProdutos');
 });
+
+//relatorio de vendas
+app.get('/relatorioVendas', function (req, res) {
+    let sql = `
+        SELECT v.id_venda, p.nome AS produto, v.quantidade, v.valor_total, v.data_venda
+        FROM venda v
+        JOIN produto p ON v.id_produto = p.id_produto
+    `;
+    conexao.query(sql, function (erro, retorno) {
+        if (erro) {
+            console.error('Erro ao buscar vendas:', erro);
+            return res.status(500).send('Erro ao buscar vendas.');
+        }
+        res.render('relatorioVendas', { vendas: retorno });
+    });
+});
+
 
 //servidor
 app.listen(3000);

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Vendas</title>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Relatório de Vendas</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Produto</th>
+                    <th>Quantidade</th>
+                    <th>Valor Total</th>
+                    <th>Data da Venda</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each vendas}}
+                <tr>
+                    <td>{{id_venda}}</td>
+                    <td>{{produto}}</td>
+                    <td>{{quantidade}}</td>
+                    <td>R$ {{valor_total}}</td>
+                    <td>{{data_venda}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+        <a href="/listaProdutos" class="btn btn-primary">Voltar</a>
+    </div>
+</body>
+</html>
