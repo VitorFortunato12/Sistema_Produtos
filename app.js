@@ -47,7 +47,7 @@ app.get('/cadastrarProduto', function (req, res) {
 app.post('/cadastrarProduto', function (req, res) {
     try {
         let { nome, descricao, categoria, preco, quantidade } = req.body;
-        
+
         // Validação dos campos obrigatórios
         if (!nome || !descricao || !categoria || !preco || !quantidade) {
             return res.send(`
@@ -170,6 +170,47 @@ Handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
     });
 });*/
 
+//rota para decrementar (comprar)
+app.get('/comprar/:id_produto', (req, res) => {
+    const id = req.params.id_produto;
+
+    // Atualizar a quantidade no banco de dados
+    const sql = `UPDATE produto SET quantidade = quantidade - 1 WHERE id_produto = ? AND quantidade > 0`;
+
+    conexao.query(sql, [id], (erro, resultado) => {
+        if (erro) {
+            console.error('Erro ao atualizar a quantidade:', erro);
+            return res.status(500).send('Erro ao processar a compra.');
+        }
+
+        if (resultado.affectedRows === 0) {
+            // Se não houver mais quantidade ou produto não encontrado, tenta deletar
+            const deleteSql = `DELETE FROM produto WHERE id_produto = ?`;
+            conexao.query(deleteSql, [id], (erroDelete, retornoDelete) => {
+                if (erroDelete) {
+                    console.error('Erro ao deletar produto:', erroDelete);
+                    return res.status(500).send('Erro ao processar a exclusão.');
+                }
+
+                // Caso haja uma imagem, tenta deletar também
+                const imagem = req.params.imagem; // Certifique-se de que 'imagem' é passado corretamente no req.params
+                if (imagem) {
+                    fs.unlink(__dirname + '/imagens/' + imagem, (erroImagem) => {
+                        if (erroImagem) {
+                            console.error('Erro ao remover imagem:', erroImagem);
+                            return res.status(500).send('Erro ao remover a imagem.');
+                        }
+                    });
+                }
+
+                console.log('Produto excluído com sucesso!');
+            });
+        }
+
+        // Redirecionar para a lista de produtos
+        res.redirect('/listaProdutos');
+    });
+});
 
 //rota remoçao produto
 app.get('/remover/:id_produto&:imagem', function (req, res) {
@@ -177,7 +218,7 @@ app.get('/remover/:id_produto&:imagem', function (req, res) {
 
     conexao.query(sql, function (erro, retorno) {
         if (erro) throw erro;
-        fs.unlink(__dirname + '/imagens/' + req.params.imagem,(erro_imagem)=> {
+        fs.unlink(__dirname + '/imagens/' + req.params.imagem, (erro_imagem) => {
             console.log(erro_imagem);
         });
     });
@@ -187,9 +228,9 @@ app.get('/remover/:id_produto&:imagem', function (req, res) {
 //rota para rediricionar para editar produto
 app.get('/formularioEditar/:id_produto', function (req, res) {
     let sql = `SELECT * FROM produto WHERE id_produto = ${req.params.id_produto}`;
-    conexao.query(sql, function(erro,retorno){
-        if(erro) throw erro;
-        res.render('formularioEditar', {produto:retorno[0]});
+    conexao.query(sql, function (erro, retorno) {
+        if (erro) throw erro;
+        res.render('formularioEditar', { produto: retorno[0] });
     });;
 });
 
@@ -208,12 +249,12 @@ app.post('/editar', function (req, res) {
     }
 
     //Definir o tipo de ediçao
-    try{
+    try {
         let imagem = req.files.imagem;
         let sql = `UPDATE produto SET nome = '${nome}', descricao = '${descricao}', categoria = '${categoria}', preco = '${preco}', quantidade = '${quantidade}', imagem = '${imagem.name}' WHERE id_produto = ${id_produto}`;
 
-        conexao.query(sql, function (erro, retorno){
-            if(erro) throw erro;
+        conexao.query(sql, function (erro, retorno) {
+            if (erro) throw erro;
 
             //remover imagem antiga
             fs.unlink(__dirname + '/imagens/' + nomeImagem, (erro_imagem) => {
@@ -223,11 +264,11 @@ app.post('/editar', function (req, res) {
             //salvar nova imagem
             imagem.mv(__dirname + '/imagens/' + imagem.name);
         });
-    }catch(erro){
+    } catch (erro) {
         let sql = `UPDATE produto SET nome = '${nome}', descricao = '${descricao}', categoria = '${categoria}', preco = '${preco}', quantidade = '${quantidade}' WHERE id_produto = ${id_produto}`;
 
-        conexao.query(sql, function (erro, retorno){
-            if(erro) throw erro;
+        conexao.query(sql, function (erro, retorno) {
+            if (erro) throw erro;
         });
     }
     res.redirect('/listaProdutos');
